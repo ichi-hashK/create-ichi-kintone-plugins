@@ -2,12 +2,34 @@ import { execa } from "execa";
 import fs from "fs";
 import path from "path";
 
+// プラグイン名をサニタイズする関数
+function sanitizePluginName(name) {
+  // 危険な文字を除去または置換
+  return name
+    .replace(/[<>:"/\\|?*]/g, '') // Windowsで使用できない文字を除去
+    .replace(/\.\./g, '') // Path Traversal攻撃を防ぐ
+    .replace(/^[.-]+|[.-]+$/g, '') // 先頭・末尾のドットやハイフンを除去
+    .replace(/^[a-zA-Z0-9_-]+$/, (match) => match) // 英数字、アンダースコア、ハイフンのみ許可
+    .substring(0, 50); // 長さを制限
+}
+
 (async () => {
-  const pluginName = process.argv[2];
-  if (!pluginName) {
+  const rawPluginName = process.argv[2];
+  if (!rawPluginName) {
     console.error(
       "Plugin name is required. Usage: npm run build <plugin-name> [--secret]"
     );
+    process.exit(1);
+  }
+
+  // プラグイン名をサニタイズ
+  const pluginName = sanitizePluginName(rawPluginName);
+  
+  // サニタイズ後の名前が空または無効な場合
+  if (!pluginName || pluginName !== rawPluginName) {
+    console.error("Invalid plugin name. Use only alphanumeric characters, underscores, and hyphens.");
+    console.error("Original name:", rawPluginName);
+    console.error("Sanitized name:", pluginName);
     process.exit(1);
   }
 
