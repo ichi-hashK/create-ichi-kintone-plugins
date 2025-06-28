@@ -1,0 +1,34 @@
+{
+  "name": "create-ichi-kintone-plugins",
+  "version": "1.0.0",
+  "description": "A CLI tool to create Kintone plugins with modern frameworks (React, Vue, Svelte)",
+  "homepage": "https://github.com/ichi-hashK/create-ichi-kintone-plugins#readme",
+  "bugs": {
+    "url": "https://github.com/ichi-hashK/create-ichi-kintone-plugins/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ichi-hashK/create-ichi-kintone-plugins.git"
+  },
+  "license": "MIT",
+  "author": "ichi-hashK",
+  "keywords": [
+    "kintone",
+    "plugin",
+    "cli",
+    "vite"
+  ],
+  "type": "module",
+  "scripts": {
+    "create": "node scripts/create-plugin.js",
+    "build": "node scripts/build-plugin.js"
+  },
+  "devDependencies": {
+    "@kintone/plugin-packer": "^5.0.0",
+    "execa": "^9.6.0",
+    "javascript-obfuscator": "^4.1.1",
+    "prompts": "^2.4.2",
+    "turbo": "^2.5.4",
+    "vite": "^7.0.0"
+  }
+}

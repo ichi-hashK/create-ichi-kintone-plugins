@@ -1,0 +1,20 @@
+{
+    "name": "create-ichi-kintone-plugins",
+    "version": "1.0.0",
+    "description": "Kintoneプラグイン開発用CLIツール",
+    "author": "ichi-hashK",
+    "license": "MIT",
+    "plugins": {
+        "default": {
+            "obfuscation": {
+                "enabled": true,
+                "config": "obfuscator.config.js"
+            },
+            "build": {
+                "output": "build",
+                "minify": true,
+                "sourcemap": false
+            }
+        }
+    }
+}
