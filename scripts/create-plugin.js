@@ -29,14 +29,14 @@ import { execa } from "execa";
   // dummy src/index.js 作成
   fs.writeFileSync(path.join(srcDir, "index.js"), 'console.log("hello");');
 
-  // manifest.json 作成 (必要最小限)
+  // manifest.json 作成 (修正版)
   const manifest = {
     "$schema": "https://raw.githubusercontent.com/kintone/js-sdk/%40kintone/plugin-manifest-validator%4010.2.0/packages/plugin-manifest-validator/manifest-schema.json",
     "manifest_version": 1,
     "version": 1,
     "type": "APP",
     "desktop": {},
-    "icon": "",
+    "icon": "image/icon.png",
     "config": {},
     "name": {
       "en": pluginName
@@ -44,7 +44,10 @@ import { execa } from "execa";
     "description": {
       "en": pluginName
     },
-    "mobile": {}
+    "mobile": {},
+    "homepage_url": {
+      "en": "https://example.com"
+    }
   };
 
   fs.writeFileSync(
@@ -52,8 +55,16 @@ import { execa } from "execa";
     JSON.stringify(manifest, null, 2)
   );
 
-  // dummy icon.png 作成
-  fs.writeFileSync(path.join(iconDir, "icon.png"), "");
+  // dummy icon.png 作成（実際のファイルとして）
+  const dummyIconData = Buffer.from([
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+    0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+    0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+    0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
+  ]);
+  fs.writeFileSync(path.join(iconDir, "icon.png"), dummyIconData);
 
   // package.json 作成
   const packageJson = {
@@ -81,6 +92,7 @@ import { execa } from "execa";
 
 export default defineConfig({
   build: {
+    outDir: 'build',
     lib: {
       entry: 'src/index.js',
       name: '${pluginName}',
@@ -98,6 +110,48 @@ export default defineConfig({
 })`;
 
   fs.writeFileSync(path.join(dir, "vite.config.js"), viteConfig);
+
+  // ppkファイル生成（@kintone/plugin-packerを使用）
+  try {
+    console.log("証明書を生成中...");
+    
+    // buildディレクトリを作成
+    const buildDir = path.join(dir, "build");
+    fs.mkdirSync(buildDir, { recursive: true });
+    
+    await execa(
+      "npx",
+      ["@kintone/plugin-packer", "./src", "--out", "./build/plugin.zip"],
+      { cwd: dir, stdio: "inherit" }
+    );
+    
+    // buildディレクトリ内のppkファイルをプラグインのルートディレクトリに移動
+    const buildFiles = fs.readdirSync(buildDir);
+    const ppkFiles = buildFiles.filter(file => file.endsWith('.ppk'));
+    
+    for (const ppkFile of ppkFiles) {
+      const sourcePath = path.join(buildDir, ppkFile);
+      const destPath = path.join(dir, ppkFile);
+      fs.renameSync(sourcePath, destPath);
+    }
+    
+    // 移動されたppkファイルを確認
+    const files = fs.readdirSync(dir);
+    const movedPpkFiles = files.filter(file => file.endsWith('.ppk'));
+    if (movedPpkFiles.length > 0) {
+      console.log(`証明書が生成されました: ${movedPpkFiles[0]}`);
+      if (movedPpkFiles.length > 1) {
+        console.log(`その他の証明書: ${movedPpkFiles.slice(1).join(', ')}`);
+      }
+    } else {
+      console.log("証明書ファイルが見つかりませんでした");
+    }
+    
+    console.log("プラグインがビルドされました: build/plugin.zip");
+  } catch (error) {
+    console.warn("証明書の生成に失敗しました。後で手動で生成してください。");
+    console.warn("エラー:", error.message);
+  }
 
   console.log(
     `Plugin ${pluginName} created in packages/${pluginName}`
