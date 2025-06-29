@@ -6,9 +6,9 @@ import path from "path";
 function sanitizePluginName(name) {
   // 危険な文字を除去または置換
   return name
-    .replace(/[<>:"/\\|?*]/g, '') // Windowsで使用できない文字を除去
-    .replace(/\.\./g, '') // Path Traversal攻撃を防ぐ
-    .replace(/^[.-]+|[.-]+$/g, '') // 先頭・末尾のドットやハイフンを除去
+    .replace(/[<>:"/\\|?*]/g, "") // Windowsで使用できない文字を除去
+    .replace(/\.\./g, "") // Path Traversal攻撃を防ぐ
+    .replace(/^[.-]+|[.-]+$/g, "") // 先頭・末尾のドットやハイフンを除去
     .replace(/^[a-zA-Z0-9_-]+$/, (match) => match) // 英数字、アンダースコア、ハイフンのみ許可
     .substring(0, 50); // 長さを制限
 }
@@ -24,17 +24,19 @@ function sanitizePluginName(name) {
 
   // プラグイン名をサニタイズ
   const pluginName = sanitizePluginName(rawPluginName);
-  
+
   // サニタイズ後の名前が空または無効な場合
   if (!pluginName || pluginName !== rawPluginName) {
-    console.error("Invalid plugin name. Use only alphanumeric characters, underscores, and hyphens.");
+    console.error(
+      "Invalid plugin name. Use only alphanumeric characters, underscores, and hyphens."
+    );
     console.error("Original name:", rawPluginName);
     console.error("Sanitized name:", pluginName);
     process.exit(1);
   }
 
   // --secretフラグのチェック
-  const shouldObfuscate = process.argv.includes('--secret');
+  const shouldObfuscate = process.argv.includes("--secret");
 
   const pluginDir = path.resolve("packages", pluginName);
   if (!fs.existsSync(pluginDir)) {
@@ -45,15 +47,31 @@ function sanitizePluginName(name) {
   // プラグインの種類を判別
   const viteConfigPath = path.join(pluginDir, "vite.config.js");
   const isVitePlugin = fs.existsSync(viteConfigPath);
-  
-  console.log(`Building plugin: ${pluginName} (${isVitePlugin ? 'Vite' : 'Traditional'} type)${shouldObfuscate ? ' with obfuscation' : ''}`);
+
+  console.log(
+    `Building plugin: ${pluginName} (${
+      isVitePlugin ? "Vite" : "Traditional"
+    } type)${shouldObfuscate ? " with obfuscation" : ""}`
+  );
 
   if (isVitePlugin) {
     // Vite型プラグインの処理
+    // 0. 依存パッケージをインストール
+    try {
+      console.log(`Running npm install in ${pluginDir}...`);
+      await execa("npm", ["install"], { cwd: pluginDir, stdio: "inherit" });
+      console.log("npm install completed.");
+    } catch (error) {
+      console.error("npm install failed:", error.message);
+      process.exit(1);
+    }
     // 1. Viteビルド
     try {
       console.log(`Running Vite build in ${pluginDir}...`);
-      await execa("npm", ["run", "build"], { cwd: pluginDir, stdio: "inherit" });
+      await execa("npm", ["run", "build"], {
+        cwd: pluginDir,
+        stdio: "inherit",
+      });
       console.log("Vite build completed.");
     } catch (error) {
       console.error("Vite build failed:", error.message);
@@ -65,32 +83,45 @@ function sanitizePluginName(name) {
       try {
         const distPath = path.join(pluginDir, "dist");
         if (!fs.existsSync(distPath)) {
-          console.error("Dist directory not found. Vite build may have failed.");
+          console.error(
+            "Dist directory not found. Vite build may have failed."
+          );
           process.exit(1);
         }
-        const JavaScriptObfuscator = (await import("javascript-obfuscator")).default;
+        const JavaScriptObfuscator = (await import("javascript-obfuscator"))
+          .default;
         let obfuscatorConfig = {};
-        
+
         // rootのobfuscator.config.jsを読み込み
         const configPath = path.join(process.cwd(), "obfuscator.config.js");
         if (fs.existsSync(configPath)) {
           try {
             // fileスキームを付与してimport（Windows対応）
-            const configModule = await import('file://' + configPath.replace(/\\/g, '/'));
+            const configModule = await import(
+              "file://" + configPath.replace(/\\/g, "/")
+            );
             obfuscatorConfig = configModule.default || configModule;
             console.log("rootのobfuscator.config.jsを読み込みました");
           } catch (error) {
-            console.warn("rootのobfuscator.config.jsの読み込みに失敗しました:", error.message);
+            console.warn(
+              "rootのobfuscator.config.jsの読み込みに失敗しました:",
+              error.message
+            );
           }
         } else {
-          console.warn("rootのobfuscator.config.jsが見つかりません。デフォルト設定を使用します。");
+          console.warn(
+            "rootのobfuscator.config.jsが見つかりません。デフォルト設定を使用します。"
+          );
         }
-        
+
         const files = fs.readdirSync(distPath).filter((f) => f.endsWith(".js"));
         for (const file of files) {
           const filePath = path.join(distPath, file);
           const code = fs.readFileSync(filePath, "utf-8");
-          const obfuscated = JavaScriptObfuscator.obfuscate(code, obfuscatorConfig);
+          const obfuscated = JavaScriptObfuscator.obfuscate(
+            code,
+            obfuscatorConfig
+          );
           fs.writeFileSync(filePath, obfuscated.getObfuscatedCode());
           console.log(`Obfuscated: ${file}`);
         }
@@ -109,17 +140,17 @@ function sanitizePluginName(name) {
       console.log("Copying src to dist directory...");
       const srcDir = path.join(pluginDir, "src");
       const distDir = path.join(pluginDir, "dist");
-      
+
       if (!fs.existsSync(srcDir)) {
         console.error("src directory not found.");
         process.exit(1);
       }
-      
+
       if (fs.existsSync(distDir)) {
         fs.rmSync(distDir, { recursive: true, force: true });
       }
       fs.mkdirSync(distDir, { recursive: true });
-      
+
       const copyRecursive = (src, dest) => {
         if (fs.statSync(src).isDirectory()) {
           if (!fs.existsSync(dest)) {
@@ -133,7 +164,7 @@ function sanitizePluginName(name) {
           fs.copyFileSync(src, dest);
         }
       };
-      
+
       copyRecursive(srcDir, distDir);
       console.log("src copied to dist directory.");
     } catch (error) {
@@ -149,42 +180,53 @@ function sanitizePluginName(name) {
           console.error("Dist directory not found.");
           process.exit(1);
         }
-        const JavaScriptObfuscator = (await import("javascript-obfuscator")).default;
+        const JavaScriptObfuscator = (await import("javascript-obfuscator"))
+          .default;
         let obfuscatorConfig = {};
-        
+
         // rootのobfuscator.config.jsを読み込み
         const configPath = path.join(process.cwd(), "obfuscator.config.js");
         if (fs.existsSync(configPath)) {
           try {
             // fileスキームを付与してimport（Windows対応）
-            const configModule = await import('file://' + configPath.replace(/\\/g, '/'));
+            const configModule = await import(
+              "file://" + configPath.replace(/\\/g, "/")
+            );
             obfuscatorConfig = configModule.default || configModule;
             console.log("rootのobfuscator.config.jsを読み込みました");
           } catch (error) {
-            console.warn("rootのobfuscator.config.jsの読み込みに失敗しました:", error.message);
+            console.warn(
+              "rootのobfuscator.config.jsの読み込みに失敗しました:",
+              error.message
+            );
           }
         } else {
-          console.warn("rootのobfuscator.config.jsが見つかりません。デフォルト設定を使用します。");
+          console.warn(
+            "rootのobfuscator.config.jsが見つかりません。デフォルト設定を使用します。"
+          );
         }
-        
+
         // dist内のjsファイルを再帰的に検索して難読化
         const obfuscateRecursive = (dir) => {
           const items = fs.readdirSync(dir);
           for (const item of items) {
             const itemPath = path.join(dir, item);
             const stat = fs.statSync(itemPath);
-            
+
             if (stat.isDirectory()) {
               obfuscateRecursive(itemPath);
-            } else if (item.endsWith('.js')) {
+            } else if (item.endsWith(".js")) {
               const code = fs.readFileSync(itemPath, "utf-8");
-              const obfuscated = JavaScriptObfuscator.obfuscate(code, obfuscatorConfig);
+              const obfuscated = JavaScriptObfuscator.obfuscate(
+                code,
+                obfuscatorConfig
+              );
               fs.writeFileSync(itemPath, obfuscated.getObfuscatedCode());
-              console.log(`Obfuscated: ${itemPath.replace(pluginDir, '')}`);
+              console.log(`Obfuscated: ${itemPath.replace(pluginDir, "")}`);
             }
           }
         };
-        
+
         obfuscateRecursive(distPath);
         console.log("Code obfuscation completed for traditional plugin.");
       } catch (error) {
@@ -199,22 +241,31 @@ function sanitizePluginName(name) {
   // 3. plugin.zipを生成
   try {
     console.log("Generating plugin.zip...");
-    
+
     // 既存のppkファイルを探す
     const pluginFiles = fs.readdirSync(pluginDir);
-    const ppkFiles = pluginFiles.filter(file => file.endsWith('.ppk'));
-    
+    const ppkFiles = pluginFiles.filter((file) => file.endsWith(".ppk"));
+
     if (ppkFiles.length === 0) {
-      console.error("No ppk file found. Please create a plugin first with 'npm run create'.");
+      console.error(
+        "No ppk file found. Please create a plugin first with 'npm run create'."
+      );
       process.exit(1);
     }
-    
+
     const ppkFile = ppkFiles[0]; // 最初のppkファイルを使用
     console.log(`Using existing ppk file: ${ppkFile}`);
-    
+
     await execa(
       "npx",
-      ["@kintone/plugin-packer", "./dist", "--out", "plugin.zip", "--ppk", ppkFile],
+      [
+        "@kintone/plugin-packer",
+        "./dist",
+        "--out",
+        "plugin.zip",
+        "--ppk",
+        ppkFile,
+      ],
       { cwd: pluginDir, stdio: "inherit" }
     );
     console.log("plugin.zip generated.");
@@ -253,13 +304,19 @@ function sanitizePluginName(name) {
     const distDir = path.join(pluginDir, "dist");
     if (fs.existsSync(distDir)) {
       fs.rmSync(distDir, { recursive: true, force: true });
-      console.log("Plugin local dist directory deleted.");
     }
   } catch (error) {
-    console.error("Failed to delete plugin local dist directory:", error.message);
+    console.error(
+      "Failed to delete plugin local dist directory:",
+      error.message
+    );
   }
 
-  console.log(`✅ Plugin ${pluginName} built${shouldObfuscate ? ', obfuscated' : ''}, and packaged successfully!`);
+  console.log(
+    `✅ Plugin ${pluginName} built${
+      shouldObfuscate ? ", obfuscated" : ""
+    }, and packaged successfully!`
+  );
   console.log(`📁 Output: dist/${pluginName}/`);
   console.log(`📦 Plugin zip: dist/${pluginName}/${pluginName}.zip`);
-})(); 
+})();
