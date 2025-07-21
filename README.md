@@ -21,7 +21,7 @@ Kintone プラグイン開発用の CLI ツールです。Vite を使用した�
 1. リポジトリをクローン:
 
 ```bash
-git clone https://github.com/ichi-hashK/create-ichi-kintone-plugins.git
+git clone https://github.com/iguchi-K/create-ichi-kintone-plugins.git
 cd create-ichi-kintone-plugins
 ```
 
@@ -136,14 +136,14 @@ npm run build sample --secret
 #### 従来型プラグインの場合
 
 1. **ソースコピー**: `src/`の内容を`dist/`にコピー
-2. **コード難読化**: `--secret`フラグがある場合のみ JavaScript ファイルを難読化（`dist/`配下のjsを再帰的に処理）
+2. **コード難読化**: `--secret`フラグがある場合のみ JavaScript ファイルを難読化（`dist/`配下の js を再帰的に処理）
 3. **プラグイン zip 化**: `@kintone/plugin-packer`で zip 作成
 4. **配布用ファイル生成**: `dist/<プラグイン名>/<プラグイン名>.zip`に配置
 5. **一時ファイル削除**: 各プラグインの`dist/`フォルダを削除
 
 ### コード難読化について
 
-- **`--secret`フラグ**: Vite型・従来型どちらのプラグインでも、`--secret`フラグを付けてビルドするとJavaScriptファイルが難読化されます。
+- **`--secret`フラグ**: Vite 型・従来型どちらのプラグインでも、`--secret`フラグを付けてビルドすると JavaScript ファイルが難読化されます。
 - **難読化設定**: `obfuscator.config.js`でカスタマイズ可能
 - **難読化しない場合**: `--secret`フラグを付けなければ難読化は行われません
 
@@ -158,7 +158,7 @@ npm run build sample --secret
 
 - `npm run create <名前>` - 新しいプラグインを作成
 - `npm run build <名前>` - プラグインをビルド・パッケージング
-- `npm run build <名前> --secret` - プラグインをビルド・難読化・パッケージング（Vite型のみ）
+- `npm run build <名前> --secret` - プラグインをビルド・難読化・パッケージング（Vite 型のみ）
 
 ### 難読化設定
 

@@ -2,7 +2,7 @@
     "name": "create-ichi-kintone-plugins",
     "version": "1.0.0",
     "description": "Kintoneプラグイン開発用CLIツール",
-    "author": "ichi-hashK",
+    "author": "iguchi-K",
     "license": "MIT",
     "plugins": {
         "default": {

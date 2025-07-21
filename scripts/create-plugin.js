@@ -2,6 +2,21 @@ import fs from "fs";
 import path from "path";
 import { execa } from "execa";
 
+// メインのpackage.jsonからviteバージョンを読み込む
+function getViteVersionFromMain() {
+  try {
+    const mainPackageJson = JSON.parse(
+      fs.readFileSync("package.json", "utf-8")
+    );
+    return mainPackageJson.devDependencies.vite || "~7.0.0"; // フォールバック
+  } catch (error) {
+    console.warn(
+      "Failed to read vite version from main package.json, using fallback"
+    );
+    return "~7.0.0";
+  }
+}
+
 // プラグイン名をサニタイズする関数
 function sanitizePluginName(name) {
   // 危険な文字を除去または置換
@@ -103,7 +118,7 @@ function sanitizePluginName(name) {
     },
     dependencies: {},
     devDependencies: {
-      vite: "workspace:*",
+      vite: getViteVersionFromMain(),
     },
   };
 
@@ -147,7 +162,7 @@ export default defineConfig({
     await execa(
       "npx",
       ["@kintone/plugin-packer", "./src", "--out", "./build/plugin.zip"],
-      { cwd: dir, stdio: "inherit" }
+      { cwd: dir, stdio: "inherit", shell: true }
     );
 
     // buildディレクトリ内のppkファイルをプラグインのルートディレクトリに移動
